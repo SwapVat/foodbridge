@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FoodBridge | Surplus Food Donation & Cloud Platform</title>
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Leaflet CSS for OpenStreetMap (CDN) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <!-- Leaflet JS (CDN) -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <!-- Chart.js (CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+  <!-- Offline Status Banner -->
+  <div id="offlineBanner" class="offline-banner hidden">
+    <span>⚠️ You are currently offline. Changes are saved locally and will synchronize when your connection is restored.</span>
+  </div>
+
+  <!-- Header / Navigation Bar -->
+  <header class="navbar">
+    <div class="nav-container">
+      <div class="brand">
+        <div class="brand-icon">🌱</div>
+        <div class="brand-text">
+          <span class="brand-title">FoodBridge</span>
+          <span class="brand-tagline">Surplus Food Platform & Cloud Monitor</span>
+        </div>
+      </div>
+
+      <!-- Navigation Links (Dynamic per Role) -->
+      <nav id="navTabs" class="nav-tabs-bar hidden">
+        <!-- Rendered based on role -->
+      </nav>
+
+      <!-- User Info & Logout (visible when logged in) -->
+      <div id="navUserSection" class="nav-user hidden">
+        <div class="user-pill">
+          <span class="user-avatar" id="navAvatar">U</span>
+          <div class="user-details">
+            <span id="navUserEmail" class="user-email">user@example.com</span>
+            <span id="navUserRoleBadge" class="badge">Role</span>
+          </div>
+        </div>
+        <button id="logoutBtn" class="btn btn-outline-danger">Log Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Global Alert / Toast Notification Container -->
+  <div id="notificationContainer" class="notification-container" aria-live="polite"></div>
+
+  <!-- Main App Shell -->
+  <main class="main-container">
+    
+    <!-- AUTHENTICATION VIEW (Logged Out) -->
+    <section id="authView" class="auth-card-wrapper">
+      <div class="auth-card">
+        <div class="auth-header">
+          <h2>Welcome to FoodBridge</h2>
+          <p id="authSubtitle">Sign in or create an account to start reducing food waste.</p>
+        </div>
+
+        <!-- Auth Mode Toggle Tabs -->
+        <div class="auth-tabs">
+          <button id="tabLogin" class="tab-btn active" type="button">Sign In</button>
+          <button id="tabSignup" class="tab-btn" type="button">Sign Up</button>
+        </div>
+
+        <!-- Login Form -->
+        <form id="loginForm" class="auth-form">
+          <div class="form-group">
+            <label for="loginEmail">Email Address</label>
+            <input type="email" id="loginEmail" required placeholder="donor@restaurant.org" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" required placeholder="••••••••" autocomplete="current-password">
+          </div>
+          <button type="submit" id="loginSubmitBtn" class="btn btn-primary btn-block">Sign In</button>
+        </form>
+
+        <!-- Sign Up Form -->
+        <form id="signupForm" class="auth-form hidden">
+          <div class="form-group">
+            <label for="signupName">Full Name / Organization Name</label>
+            <input type="text" id="signupName" required placeholder="e.g. Annapoorna Kitchen or Care Foundation">
+          </div>
+          <div class="form-group">
+            <label for="signupEmail">Email Address</label>
+            <input type="email" id="signupEmail" required placeholder="name@domain.com" autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label for="signupPassword">Password</label>
+            <input type="password" id="signupPassword" minlength="6" required placeholder="At least 6 characters" autocomplete="new-password">
+          </div>
+          
+          <!-- Role Selector (Donor, NGO, Admin) -->
+          <div class="form-group">
+            <label>Select Your Account Type</label>
+            <div class="role-selector">
+              <label class="role-option">
+                <input type="radio" name="roleChoice" value="Donor" checked>
+                <div class="role-card">
+                  <div class="role-icon">🍲</div>
+                  <strong>Food Donor</strong>
+                  <small>Restaurants, caterers & individuals donating surplus food</small>
+                </div>
+              </label>
+              <label class="role-option">
+                <input type="radio" name="roleChoice" value="NGO">
+                <div class="role-card">
+                  <div class="role-icon">🤝</div>
+                  <strong>NGO / Shelter</strong>
+                  <small>Charities & food banks collecting meals</small>
+                </div>
+              </label>
+              <label class="role-option">
+                <input type="radio" name="roleChoice" value="Admin">
+                <div class="role-card">
+                  <div class="role-icon">⚡</div>
+                  <strong>Cloud Admin</strong>
+                  <small>System analytics, demo seeding, simulator & cloud monitor</small>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <button type="submit" id="signupSubmitBtn" class="btn btn-primary btn-block">Create Account</button>
+        </form>
+      </div>
+    </section>
+
+    <!-- DONOR DASHBOARD VIEW -->
+    <section id="donorView" class="view-panel hidden">
+      <div class="dashboard-banner">
+        <div>
+          <h2>Donor Dashboard</h2>
+          <p>List fresh surplus meals with Chennai coordinates and track pickup progress live.</p>
+        </div>
+      </div>
+
+      <!-- Donor Demo Data Control Bar -->
+      <div class="card demo-action-card">
+        <div class="demo-card-content">
+          <div>
+            <h4>🧪 Donor Demo Data Tools</h4>
+            <p>Populate ~40 realistic Indian food listings spread across the last 30 days under your account (50% Picked Up, 20% Claimed, 15% Available, 15% Expired).</p>
+            <div id="donorDemoStatus" class="demo-status-text"></div>
+          </div>
+          <div class="demo-btn-group">
+            <button id="btnDonorSeedDemo" class="btn btn-primary btn-sm">
+              <span>🌱 Load My Demo Data (~40 Listings)</span>
+            </button>
+            <button id="btnDonorClearDemo" class="btn btn-outline-danger btn-sm">
+              <span>🗑️ Clear My Demo Data</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-layout">
+        <!-- New Food Listing Form Card -->
+        <div class="card form-card">
+          <div class="card-header">
+            <h3>Post Surplus Food</h3>
+            <p>Enter food category, servings, and pickup location.</p>
+          </div>
+          <form id="createListingForm">
+            <div class="form-group">
+              <label for="foodItem">Food Item Description *</label>
+              <input type="text" id="foodItem" required placeholder="e.g. 50 Packets Vegetable Biryani & Raita">
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="foodCategory">Category *</label>
+                <select id="foodCategory" required>
+                  <option value="Cooked Meals">Cooked Meals (Biryani, Rice, Curry)</option>
+                  <option value="Bakery & Bread">Bakery & Bread</option>
+                  <option value="Groceries & Grains">Groceries & Grains</option>
+                  <option value="Fresh Produce">Fresh Fruits & Vegetables</option>
+                  <option value="Sweets & Dairy">Sweets & Dairy</option>
+                  <option value="Snacks & Tiffin">Snacks & Tiffin (Idli, Dosa, Puffs)</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="servingsCount">Quantity (in Servings) *</label>
+                <input type="number" id="servingsCount" min="1" max="5000" required placeholder="e.g. 50">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="pickupAddress">Pickup Address (Chennai Area) *</label>
+              <textarea id="pickupAddress" rows="2" required placeholder="e.g. 42 Usman Road, T. Nagar, Chennai - 600017"></textarea>
+            </div>
+
+            <!-- Chennai Location Coords Selector -->
+            <div class="form-row">
+              <div class="form-group">
+                <label for="locationPreset">Chennai Area Preset</label>
+                <select id="locationPreset">
+                  <option value="custom">-- Select Area Preset --</option>
+                  <option value="13.0418,80.2341,T. Nagar">T. Nagar (Central)</option>
+                  <option value="13.0012,80.2565,Adyar">Adyar (South)</option>
+                  <option value="12.9815,80.2180,Velachery">Velachery (South)</option>
+                  <option value="13.0850,80.2101,Anna Nagar">Anna Nagar (West)</option>
+                  <option value="13.0067,80.2206,Guindy">Guindy (South-Central)</option>
+                  <option value="13.0339,80.2691,Mylapore">Mylapore (East)</option>
+                  <option value="13.0827,80.2707,Chennai Central">Chennai Central</option>
+                  <option value="12.9249,80.1000,Tambaram">Tambaram (Suburban)</option>
+                  <option value="12.9360,80.2290,OMR Thoraipakkam">OMR - IT Corridor</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="geoCoordinates">Latitude, Longitude</label>
+                <input type="text" id="geoCoordinates" value="13.0418, 80.2341" required placeholder="13.0418, 80.2341">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="bestBefore">Best Before Date & Time *</label>
+              <input type="datetime-local" id="bestBefore" required>
+              <small class="form-hint">Listings will automatically expire after this time.</small>
+            </div>
+
+            <button type="submit" id="postListingBtn" class="btn btn-primary btn-block">
+              <span>Post Food Donation</span>
+            </button>
+          </form>
+        </div>
+
+        <!-- My Food Listings List -->
+        <div class="card list-card">
+          <div class="card-header list-header">
+            <div>
+              <h3>My Food Listings</h3>
+              <p>Real-time updates of your donations and claim status.</p>
+            </div>
+            <span id="donorListingCount" class="counter-badge">0 items</span>
+          </div>
+
+          <div id="donorListingsContainer" class="listings-feed">
+            <div class="empty-state">
+              <p>You haven't posted any food donations yet.</p>
+              <button id="btnEmptyStateDonorSeed" class="btn btn-primary btn-sm" style="margin-top: 1rem;">
+                🌱 Load My Demo Data (~40 Listings)
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NGO DASHBOARD VIEW (Available Feed) -->
+    <section id="ngoView" class="view-panel hidden">
+      <div class="dashboard-banner">
+        <div>
+          <h2>NGO & Food Bank Feed</h2>
+          <p>Discover real-time surplus donations in Chennai, claim before expiry, and feed those in need.</p>
+        </div>
+      </div>
+
+      <!-- NGO Demo Data Control Bar -->
+      <div class="card demo-action-card">
+        <div class="demo-card-content">
+          <div>
+            <h4>🧪 NGO Demo Data Tools</h4>
+            <p>Populate ~60 claimed/picked up meals spread across the last 60 days under your account, plus ~8 available listings from fictional donors to test real-time claims.</p>
+            <div id="ngoDemoStatus" class="demo-status-text"></div>
+          </div>
+          <div class="demo-btn-group">
+            <button id="btnNgoSeedDemo" class="btn btn-primary btn-sm">
+              <span>🌱 Load My Demo Data (~68 Listings)</span>
+            </button>
+            <button id="btnNgoClearDemo" class="btn btn-outline-danger btn-sm">
+              <span>🗑️ Clear My Demo Data</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card list-card">
+        <div class="card-header list-header">
+          <div>
+            <h3>Available Surplus Food Listings</h3>
+            <p>Live feed powered by Firestore onSnapshot real-time listener.</p>
+          </div>
+          <div class="ngo-filters">
+            <label class="filter-check">
+              <input type="checkbox" id="showAllStatusCheckbox"> Show Claimed & Picked Up
+            </label>
+            <span id="ngoListingCount" class="counter-badge">0 available</span>
+          </div>
+        </div>
+
+        <div id="ngoListingsContainer" class="listings-feed grid-feed">
+          <div class="empty-state">
+            <p>No active food donations found.</p>
+            <button id="btnEmptyStateNgoSeed" class="btn btn-primary btn-sm" style="margin-top: 1rem;">
+              🌱 Load My Demo Data (~68 Listings)
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- NGO CLAIMED ANALYTICS VIEW -->
+    <section id="ngoAnalyticsView" class="view-panel hidden">
+      <div class="dashboard-banner">
+        <div>
+          <h2>My Claimed Food Analytics</h2>
+          <p>Comprehensive metrics, rescue performance, and donation distribution history for your shelter.</p>
+        </div>
+      </div>
+
+      <!-- Demo Data Control Bar inside NGO Claimed Analytics as well -->
+      <div class="card demo-action-card" style="margin-bottom: 1.5rem;">
+        <div class="demo-card-content">
+          <div>
+            <h4>🧪 Quick Demo Seeder for Analytics</h4>
+            <p>Click below to seed 60 claimed listings across 60 days and watch this entire analytics dashboard populate live!</p>
+            <div id="ngoAnalyticsDemoStatus" class="demo-status-text"></div>
+          </div>
+          <div class="demo-btn-group">
+            <button id="btnNgoSeedDemoFromAnalytics" class="btn btn-primary btn-sm">
+              <span>🌱 Load My Demo Data (~68 Listings)</span>
+            </button>
+            <button id="btnNgoClearDemoFromAnalytics" class="btn btn-outline-danger btn-sm">
+              <span>🗑️ Clear My Demo Data</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty State for NGO Claims -->
+      <div id="ngoClaimedEmptyState" class="empty-state hidden" style="margin-bottom: 1.5rem;">
+        <p>No food claims found under your shelter's account yet.</p>
+        <button id="btnEmptyNgoAnalyticsSeed" class="btn btn-primary btn-sm" style="margin-top: 1rem;">
+          🌱 Load My Demo Data (~60 Claimed Meals)
+        </button>
+      </div>
+
+      <!-- NGO Stat Cards (4 Cards) -->
+      <div class="stats-grid" id="ngoStatsGrid">
+        <div class="stat-card">
+          <div class="stat-icon">🤝</div>
+          <div class="stat-info">
+            <span class="stat-label">Total Claims</span>
+            <strong id="ngoStatTotalClaims" class="stat-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🍲</div>
+          <div class="stat-info">
+            <span class="stat-label">Meals Collected</span>
+            <strong id="ngoStatMealsCollected" class="stat-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏱️</div>
+          <div class="stat-info">
+            <span class="stat-label">Avg Claim Response</span>
+            <strong id="ngoStatAvgResponseTime" class="stat-value">0 min</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-info">
+            <span class="stat-label">Pickup Completion Rate</span>
+            <strong id="ngoStatPickupRate" class="stat-value">0%</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- NGO Charts Grid (5 Charts) -->
+      <div class="charts-grid" id="ngoChartsGrid">
+        <!-- 1. Bar Chart: Claims per Week (Last 8 Weeks) -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Claims Per Week (Last 8 Weeks)</h3>
+            <p>Weekly food rescue frequency</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartNgoClaimsPerWeek"></canvas>
+          </div>
+        </div>
+
+        <!-- 2. Line Chart: Meals Collected Over Time (Last 30 Days) -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Meals Collected Over Time (Last 30 Days)</h3>
+            <p>Cumulative servings received by your shelter</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartNgoMealsOverTime"></canvas>
+          </div>
+        </div>
+
+        <!-- 3. Pie Chart: Claimed vs Picked Up -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Status Breakdown</h3>
+            <p>Claimed (Pending Pickup) vs Picked Up</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartNgoStatusPie"></canvas>
+          </div>
+        </div>
+
+        <!-- 4. Doughnut Chart: Meals Collected by Category -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Meals Collected by Category</h3>
+            <p>Cooked meals, bakery, produce, sweets & snacks</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartNgoCategoryDoughnut"></canvas>
+          </div>
+        </div>
+
+        <!-- 5. Horizontal Bar: Top 5 Donors Collected From -->
+        <div class="card chart-card" style="grid-column: 1 / -1;">
+          <div class="card-header">
+            <h3>Top 5 Donors Collected From</h3>
+            <p>Donors providing the highest meal servings to your NGO</p>
+          </div>
+          <div class="chart-wrapper" style="height: 240px;">
+            <canvas id="chartNgoTopDonors"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Claims Table (10 Most Recent) -->
+      <div class="card" id="ngoRecentClaimsCard" style="margin-top: 1.5rem;">
+        <div class="card-header list-header">
+          <div>
+            <h3>10 Most Recent Food Claims</h3>
+            <p>Real-time log of meals claimed and picked up by your organization.</p>
+          </div>
+          <span class="counter-badge" id="ngoRecentClaimsCount">0 items</span>
+        </div>
+        <div class="table-responsive">
+          <table class="benchmark-table">
+            <thead>
+              <tr>
+                <th>Food Item</th>
+                <th>Donor Name</th>
+                <th>Servings</th>
+                <th>Status</th>
+                <th>Claimed Time</th>
+                <th>Pickup Time</th>
+              </tr>
+            </thead>
+            <tbody id="ngoRecentClaimsTableBody">
+              <tr>
+                <td colspan="6" class="text-center text-muted">No claims recorded yet.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- MAP VIEW (Available to All Roles) -->
+    <section id="mapView" class="view-panel hidden">
+      <div class="dashboard-banner">
+        <div>
+          <h2>Chennai Surplus Food Geolocation Map</h2>
+          <p>Interactive OpenStreetMap (Leaflet) showing active surplus donations across Chennai with live claim actions.</p>
+        </div>
+      </div>
+
+      <div class="card map-card">
+        <div class="map-controls-header">
+          <div>
+            <h3 id="mapTitle">Active Donation Map</h3>
+            <span class="text-muted" id="mapStatusCount">Plotting active locations...</span>
+          </div>
+          <div class="map-legend">
+            <span class="legend-badge available-dot">● Available</span>
+            <span class="legend-badge claimed-dot">● Claimed</span>
+            <span class="legend-badge pickedup-dot">● Picked Up</span>
+          </div>
+        </div>
+        <div id="leafletMap" class="leaflet-container-box"></div>
+      </div>
+    </section>
+
+    <!-- GENERAL / DONOR / ADMIN ANALYTICS DASHBOARD VIEW -->
+    <section id="analyticsView" class="view-panel hidden">
+      <div class="dashboard-banner">
+        <div>
+          <h2 id="analyticsTitle">Live Analytics Dashboard</h2>
+          <p id="analyticsSubtitle">Real-time statistics and trends rendered using Chart.js via onSnapshot.</p>
+        </div>
+      </div>
+
+      <!-- Stat Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-info">
+            <span class="stat-label">Total Listings</span>
+            <strong id="statTotalListings" class="stat-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🍲</div>
+          <div class="stat-info">
+            <span class="stat-label">Meals Saved</span>
+            <strong id="statMealsSaved" class="stat-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🤝</div>
+          <div class="stat-info">
+            <span class="stat-label">Active NGOs / Shelters</span>
+            <strong id="statActiveNgos" class="stat-value">0</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div class="stat-info">
+            <span class="stat-label">Claim Rate %</span>
+            <strong id="statClaimRate" class="stat-value">0%</strong>
+          </div>
+        </div>
+      </div>
+
+      <!-- Empty state if analytics data is empty -->
+      <div id="analyticsEmptyState" class="empty-state hidden" style="margin-bottom: 1.5rem;">
+        <p>No activity recorded yet for your account.</p>
+        <button id="btnEmptyStateAnalyticsSeed" class="btn btn-primary btn-sm" style="margin-top: 1rem;">
+          🌱 Load Demo Data to See Real-Time Charts
+        </button>
+      </div>
+
+      <!-- Charts Grid -->
+      <div class="charts-grid" id="analyticsChartsGrid">
+        <!-- 1. Bar Chart: Listings Per Day (Last 7 Days) -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Listings Per Day (Last 7 Days)</h3>
+            <p>Daily frequency of surplus food listings</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartListingsPerDay"></canvas>
+          </div>
+        </div>
+
+        <!-- 2. Pie Chart: Listings by Status -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Listings by Status</h3>
+            <p>Available vs Claimed vs Picked Up vs Expired</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartListingsByStatus"></canvas>
+          </div>
+        </div>
+
+        <!-- 3. Doughnut Chart: Food by Category -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Food by Category</h3>
+            <p>Distribution of cooked meals, bakery, groceries, produce</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartFoodByCategory"></canvas>
+          </div>
+        </div>
+
+        <!-- 4. Line Chart: Cumulative Meals Saved Over Time -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Meals Saved Over Time (Last 30 Days)</h3>
+            <p>Cumulative servings rescued and delivered</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartMealsSavedLine"></canvas>
+          </div>
+        </div>
+
+        <!-- 5. Horizontal Bar: Top 5 Donors -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Top 5 Food Donors</h3>
+            <p>Highest contributions by servings</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartTopDonors"></canvas>
+          </div>
+        </div>
+
+        <!-- 6. Horizontal Bar: Top 5 NGOs -->
+        <div class="card chart-card">
+          <div class="card-header">
+            <h3>Top 5 NGOs / Food Banks</h3>
+            <p>Highest distribution by meals claimed</p>
+          </div>
+          <div class="chart-wrapper">
+            <canvas id="chartTopNgos"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ADMIN DEMO SEEDER & SCALABILITY SIMULATOR VIEW -->
+    <section id="adminView" class="view-panel hidden">
+      <div class="dashboard-banner banner-admin">
+        <div>
+          <h2>Admin Tools: Seeder & Scalability Simulator</h2>
+          <p>Populate realistic Chennai Indian food demo data blending registered and fictional accounts, and benchmark Firestore performance.</p>
+        </div>
+      </div>
+
+      <div class="grid-layout">
+        <!-- Demo Seeder Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3>System Demo Data Seeder (Batch Write)</h3>
+            <p>Create ~60 realistic Indian food listings blending registered accounts with fictional donors and NGOs across Chennai over the last 30 days.</p>
+          </div>
+          <div class="seeder-actions">
+            <button id="btnSeedDemo" class="btn btn-primary">
+              <span>🌱 Load System Demo Data (~60 Listings)</span>
+            </button>
+            <button id="btnClearDemo" class="btn btn-outline-danger">
+              <span>🗑️ Clear All Demo Data</span>
+            </button>
+          </div>
+          <div id="seederStatus" class="tool-status-box text-muted">
+            Ready to load or clear demo data. All demo entries are tagged with <code>isDemo: true</code>.
+          </div>
+        </div>
+
+        <!-- Scalability Simulator Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Firestore Scalability Simulator</h3>
+            <p>Execute multi-document batch writes (in chunks under 500) to measure latency, throughput, and performance.</p>
+          </div>
+          <div class="simulator-controls">
+            <div class="form-group">
+              <label for="simulatorBatchSize">Select Volume:</label>
+              <select id="simulatorBatchSize">
+                <option value="50">50 Listings</option>
+                <option value="100" selected>100 Listings (Recommended Benchmark)</option>
+                <option value="250">250 Listings</option>
+                <option value="500">500 Listings (Stress Test)</option>
+              </select>
+            </div>
+            <button id="btnRunSimulator" class="btn btn-claim">
+              <span>⚡ Run Scalability Test</span>
+            </button>
+          </div>
+          <div id="simulatorStatus" class="tool-status-box text-muted">
+            Select listing volume to execute write batch test.
+          </div>
+        </div>
+      </div>
+
+      <!-- Simulator Results Table & Chart -->
+      <div class="card simulator-results-card">
+        <div class="card-header">
+          <h3>Scalability Benchmark Results</h3>
+          <p>Real performance data: Execution time vs Record volume across test runs.</p>
+        </div>
+        
+        <div class="table-responsive">
+          <table class="benchmark-table" id="benchmarkTable">
+            <thead>
+              <tr>
+                <th>Test #</th>
+                <th>Records Written</th>
+                <th>Total Time (ms)</th>
+                <th>Avg per Record (ms)</th>
+                <th>Throughput (records/sec)</th>
+                <th>Timestamp</th>
+              </tr>
+            </thead>
+            <tbody id="benchmarkTableBody">
+              <tr>
+                <td colspan="6" class="text-center text-muted">No benchmark runs recorded yet. Run the simulator above to generate data.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="chart-wrapper simulator-chart-wrapper">
+          <canvas id="chartScalability"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOUD MONITOR VIEW (All / Admin) -->
+    <section id="monitorView" class="view-panel hidden">
+      <div class="dashboard-banner">
+        <div>
+          <h2>Google Cloud Platform Monitor</h2>
+          <p>Live health metrics, Firestore read/write latency benchmarks, and connection telemetry.</p>
+        </div>
+      </div>
+
+      <!-- Latency & Connection Metrics -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">⚡</div>
+          <div class="stat-info">
+            <span class="stat-label">Firestore Write Latency</span>
+            <strong id="metricWriteLatency" class="stat-value">-- ms</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📖</div>
+          <div class="stat-info">
+            <span class="stat-label">Firestore Read Latency</span>
+            <strong id="metricReadLatency" class="stat-value">-- ms</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📡</div>
+          <div class="stat-info">
+            <span class="stat-label">Network Status</span>
+            <strong id="metricNetworkStatus" class="stat-value text-success">Online</strong>
+          </div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔄</div>
+          <div class="stat-info">
+            <span class="stat-label">onSnapshot Listener</span>
+            <strong id="metricListenerStatus" class="stat-value text-success">Connected</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid-layout">
+        <!-- Collection Counts Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Firestore Database Overview</h3>
+            <p>Live document counts and storage metrics.</p>
+          </div>
+          <ul class="monitor-specs-list">
+            <li>
+              <span><code>listings</code> Collection:</span>
+              <strong id="monitorCountListings">0 documents</strong>
+            </li>
+            <li>
+              <span><code>users</code> Collection:</span>
+              <strong id="monitorCountUsers">0 documents</strong>
+            </li>
+            <li>
+              <span>Demo Documents (<code>isDemo: true</code>):</span>
+              <strong id="monitorCountDemo">0 documents</strong>
+            </li>
+            <li>
+              <span>Offline Persistence (IndexedDB):</span>
+              <strong class="text-success">Enabled (Multi-Tab)</strong>
+            </li>
+          </ul>
+          <div style="margin-top: 1.5rem;">
+            <button id="btnRunLatencyTest" class="btn btn-primary btn-block">
+              <span>⏱️ Run Live Latency Benchmark</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Cloud Infrastructure Specs -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Cloud Infrastructure Topology</h3>
+            <p>GCP project details and serverless backend specifications.</p>
+          </div>
+          <ul class="monitor-specs-list">
+            <li>
+              <span>Cloud Provider:</span>
+              <strong>Google Cloud Platform (GCP)</strong>
+            </li>
+            <li>
+              <span>Firebase Project ID:</span>
+              <code>foodbridge-50468</code>
+            </li>
+            <li>
+              <span>Database Service:</span>
+              <strong>Cloud Firestore (NoSQL Document Store)</strong>
+            </li>
+            <li>
+              <span>Firestore Region:</span>
+              <strong>asia-south1 (Mumbai, India)</strong>
+            </li>
+            <li>
+              <span>Hosting Infrastructure:</span>
+              <strong>Firebase Hosting Fastly CDN (Global Edge)</strong>
+            </li>
+            <li>
+              <span>Authentication Service:</span>
+              <strong>Google Identity Toolkit (PaaS)</strong>
+            </li>
+            <li>
+              <span>Tier:</span>
+              <span class="badge badge-available">Spark (Free Tier)</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOUD COST ESTIMATOR VIEW -->
+    <section id="costView" class="view-panel hidden">
+      <div class="dashboard-banner">
+        <div>
+          <h2>Cloud Cost Estimator & IaaS Comparison</h2>
+          <p>Model monthly operational costs under Google Cloud Firebase pricing and compare with traditional 24/7 Virtual Machines.</p>
+        </div>
+      </div>
+
+      <div class="grid-layout">
+        <!-- Sliders & Inputs -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Workload Parameter Sliders</h3>
+            <p>Adjust user traffic and database operation frequency.</p>
+          </div>
+
+          <div class="cost-slider-group">
+            <div class="slider-header">
+              <label for="sliderDau">Daily Active Users (DAU)</label>
+              <span id="valDau" class="slider-val">1,000</span>
+            </div>
+            <input type="range" id="sliderDau" min="100" max="50000" step="100" value="1000">
+          </div>
+
+          <div class="cost-slider-group">
+            <div class="slider-header">
+              <label for="sliderReads">Reads per User per Day</label>
+              <span id="valReads" class="slider-val">20</span>
+            </div>
+            <input type="range" id="sliderReads" min="1" max="100" step="1" value="20">
+          </div>
+
+          <div class="cost-slider-group">
+            <div class="slider-header">
+              <label for="sliderWrites">Writes per User per Day</label>
+              <span id="valWrites" class="slider-val">3</span>
+            </div>
+            <input type="range" id="sliderWrites" min="1" max="50" step="1" value="3">
+          </div>
+
+          <div class="cost-slider-group">
+            <div class="slider-header">
+              <label for="sliderStorageGb">Stored Data & Hosting Transfer (GB)</label>
+              <span id="valStorageGb" class="slider-val">5 GB</span>
+            </div>
+            <input type="range" id="sliderStorageGb" min="1" max="50" step="1" value="5">
+          </div>
+
+          <div id="freeTierAlert" class="cost-alert-box alert-success">
+            ✅ <strong>100% Free under Spark Tier!</strong> This workload stays within Google Cloud's free quotas (50k reads/day, 20k writes/day, 10 GB hosting transfer).
+          </div>
+        </div>
+
+        <!-- Calculated Costs Card -->
+        <div class="card">
+          <div class="card-header">
+            <h3>Monthly Cost Breakdown</h3>
+            <p>Serverless PaaS vs Traditional IaaS VM</p>
+          </div>
+
+          <div class="cost-summary-box">
+            <div class="cost-item">
+              <span>Daily Operations:</span>
+              <strong id="costDailyOps">20,000 Reads | 3,000 Writes</strong>
+            </div>
+            <div class="cost-item">
+              <span>Monthly Reads Cost:</span>
+              <strong id="costMonthlyReads">$0.00</strong>
+            </div>
+            <div class="cost-item">
+              <span>Monthly Writes Cost:</span>
+              <strong id="costMonthlyWrites">$0.00</strong>
+            </div>
+            <div class="cost-item">
+              <span>Hosting & Data Transfer:</span>
+              <strong id="costMonthlyTransfer">$0.00</strong>
+            </div>
+            <div class="cost-divider"></div>
+            <div class="cost-item cost-total">
+              <span>Estimated Firebase Monthly:</span>
+              <strong id="costTotalFirebase" class="text-success">$0.00 / mo</strong>
+            </div>
+            <div class="cost-item cost-total-iaas">
+              <span>Rented 24/7 IaaS VM (e.g. AWS t3.small / GCP e2):</span>
+              <strong id="costTotalIaas" class="text-danger">$18.50 / mo</strong>
+            </div>
+          </div>
+
+          <div class="chart-wrapper cost-chart-wrapper">
+            <canvas id="chartCostComparison"></canvas>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CLOUD ARCHITECTURE VIEW -->
+    <section id="archView" class="view-panel hidden">
+      <div class="dashboard-banner">
+        <div>
+          <h2>Cloud Computing Architecture & Theory</h2>
+          <p>System topology, deployment model, and cloud computing principles mapped to FoodBridge.</p>
+        </div>
+      </div>
+
+      <!-- Architecture Diagram Card -->
+      <div class="card">
+        <div class="card-header">
+          <h3>FoodBridge End-to-End System Topology</h3>
+          <p>Client Browser &rarr; Global CDN &rarr; Managed Auth &rarr; Real-time NoSQL Firestore</p>
+        </div>
+
+        <div class="arch-diagram-container">
+          <div class="arch-node arch-client">
+            <div class="node-icon">💻📱</div>
+            <h4>Client Browser / Mobile</h4>
+            <p>HTML5, CSS3, ES Modules, Leaflet, Chart.js</p>
+            <span class="node-tag">Edge Client</span>
+          </div>
+
+          <div class="arch-arrow">&rarr;<br><small>HTTPS / HTTP/2</small></div>
+
+          <div class="arch-node arch-hosting">
+            <div class="node-icon">🌐</div>
+            <h4>Firebase Hosting CDN</h4>
+            <p>Fastly Global Anycast CDN with SSL Termination</p>
+            <span class="node-tag">Static Web PaaS</span>
+          </div>
+
+          <div class="arch-arrow">&rarr;<br><small>REST / WebSockets</small></div>
+
+          <div class="arch-services-col">
+            <div class="arch-node arch-auth">
+              <div class="node-icon">🔐</div>
+              <h4>Firebase Auth</h4>
+              <p>Google Identity Toolkit (JWT tokens)</p>
+              <span class="node-tag">Identity PaaS</span>
+            </div>
+
+            <div class="arch-node arch-firestore">
+              <div class="node-icon">🗄️</div>
+              <h4>Cloud Firestore</h4>
+              <p>Distributed NoSQL (asia-south1, Multi-Tenant)</p>
+              <span class="node-tag">Database PaaS (BaaS)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cloud Computing Concepts Grid -->
+      <div class="charts-grid" style="margin-top: 2rem;">
+        <div class="card">
+          <div class="card-header">
+            <h3>1. Public Cloud Deployment Model</h3>
+          </div>
+          <p class="arch-text">
+            FoodBridge runs on <strong>Google Cloud Platform (GCP)</strong> public cloud infrastructure. Resources are multi-tenant, hosted in secure world-class data centers, and accessible over public Internet endpoints with TLS encryption. It eliminates capital expenditures (CapEx) for physical server hardware, rack cooling, and power redundancy.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>2. Service Model: PaaS vs IaaS vs SaaS</h3>
+          </div>
+          <p class="arch-text">
+            <strong>PaaS (Platform as a Service)</strong>: FoodBridge is built completely on PaaS (Backend-as-a-Service). Google provisions, scales, patches, and manages the database and authentication servers.
+            <br><br>
+            <em>Contrast with IaaS</em>: If we used IaaS (Virtual Machines like EC2 or GCE), we would manage Linux OS updates, configure Nginx, patch MySQL, setup failover replication, and pay 24/7 even when traffic is zero.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>3. Elasticity & Auto-Scaling</h3>
+          </div>
+          <p class="arch-text">
+            During emergency relief food drives, hundreds of donors post simultaneously. Cloud Firestore automatically scales shards horizontally without downtime or manual server provisioning. When traffic subsides at night, resources scale down to zero automatically.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <h3>4. Pay-As-You-Go & High Availability</h3>
+          </div>
+          <p class="arch-text">
+            Firebase charges solely for actual reads, writes, and stored bytes, rather than idle compute capacity. Furthermore, Firestore stores data across multiple fault domains in <code>asia-south1</code> (Mumbai) guaranteeing 99.999% SLA availability and automatic disaster recovery.
+          </p>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="app-footer">
+    <p>FoodBridge &copy; 2026 &mdash; Built with Firebase Modular SDK v10, Chart.js & Leaflet OpenStreetMap.</p>
+  </footer>
+
+  <!-- Modular Firebase Application Script -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
